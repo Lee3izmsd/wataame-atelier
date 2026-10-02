@@ -333,7 +333,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 #gradIn:hover::-webkit-slider-runnable-track,#gradIn:focus::-webkit-slider-runnable-track{background:linear-gradient(90deg,#ff8fc6 0 33%,#80cfff 33% 66%,#b28aff 66%)}
 .mini-s{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-3);margin-top:-3px}
 .mini-s i{font-style:normal}
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;border-radius:999px;background:rgba(20,6,22,.4);margin-bottom:10px}
+.seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:3px;border-radius:999px;background:rgba(20,6,22,.4);margin-bottom:10px}
 .seg button{height:32px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--ink-2)}
 .seg button[aria-selected=true]{background:linear-gradient(180deg,#ffd0e7,#f3a3cb);color:#6e2356}
 .sizerow{display:grid;grid-template-columns:auto 10px 1fr 20px;align-items:center;gap:8px;margin-top:8px;font-size:12px}
@@ -456,7 +456,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <div class="spacer"></div>
     <button class="moldbtn" id="moldBtn" hidden>型にはめる <small>長押し</small></button>
     <div class="panel" id="shapePanel">
-      <div class="seg" role="tablist"><button role="tab" data-tab="tools" aria-selected="true">指ツール</button><button role="tab" data-tab="adjust" aria-selected="false">色とふわふわ</button></div>
+      <div class="seg" role="tablist"><button role="tab" data-tab="tools" aria-selected="true">指ツール</button><button role="tab" data-tab="adjust" aria-selected="false">色とふわふわ</button><button role="tab" data-tab="top" aria-selected="false">トッピング</button></div>
       <div id="tabTools">
       <div class="tools tools4" role="group" aria-label="指ツール">
         <button class="tool" data-tool="grab" aria-pressed="true"><svg viewBox="0 0 32 32"><circle cx="11" cy="16" r="4.5"/><path d="M16 16h11M23 12l4 4-4 4"/></svg>ひっぱる<small>つまんで引く</small></button>
@@ -472,6 +472,12 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
         <label class="adjrow"><span>明るさ</span><input type="range" id="adjBri" min="60" max="130" value="100" aria-label="明るさ"><output id="adjBriV">100</output></label>
         <label class="adjrow"><span>ふわふわ</span><input type="range" id="adjFl" min="60" max="160" value="100" aria-label="ふわふわ"><output id="adjFlV">100</output></label>
         <button class="linkbtn" id="adjReset">色を元にもどす</button>
+      </div>
+      <div id="tabTop" hidden>
+        <div class="toprow" role="group" aria-label="トッピング">
+          <button class="gchip" data-top="spr" aria-pressed="false">スプレー</button><button class="gchip" data-top="gold" aria-pressed="false">金箔</button><button class="gchip" data-top="star" aria-pressed="false">星チップ</button><button class="gchip" data-top="pearl" aria-pressed="false">パール</button><button class="gchip" data-top="all">ぱらぱら</button>
+        </div>
+        <button class="linkbtn" id="topClear">トッピングをはずす</button>
       </div>
       <p class="phint" id="toolHint">つかんだ繊維をそのまま引っぱる。星の角やハートの先に。</p>
       <div class="actions">
@@ -496,9 +502,6 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
       <div class="meters" id="meters"></div>
       <div class="total"><span>総合評価</span><b><span id="totalV">0</span>%</b></div>
       <p class="comment" id="resComment"></p>
-      <div class="toprow" role="group" aria-label="トッピング"><span>トッピング</span>
-        <button class="gchip" data-top="spr" aria-pressed="false">スプレー</button><button class="gchip" data-top="gold" aria-pressed="false">金箔</button><button class="gchip" data-top="star" aria-pressed="false">星チップ</button><button class="gchip" data-top="pearl" aria-pressed="false">パール</button><button class="gchip" data-top="all">ぱらぱら</button>
-      </div>
       <div class="btngrid">
         <button class="btn" id="saveBtn">保存する</button>
         <button class="btn cream" id="eatBtn">食べてみる</button>
@@ -3456,9 +3459,15 @@ for (const id of ['adjHue', 'adjSat', 'adjBri', 'adjFl']) {
   el.addEventListener('change', () => { adjArmed = false; if (id === 'adjFl') { gridRebuild(); computeStats(true); } liveEvalSoon = true; Snd.click(); });
 }
 $('#adjReset').addEventListener('click', () => { if (B.down) return; pushUndo(); Object.assign(ADJ, { hue: 0, sat: 1, bri: 1 }); adjColors(); syncAdjUI(); Snd.click(); });
+let shapeTab = 'tools';
 $$('.seg button').forEach(b => b.addEventListener('click', () => {
+  shapeTab = b.dataset.tab;
   for (const x of $$('.seg button')) x.setAttribute('aria-selected', x === b);
-  $('#tabTools').hidden = b.dataset.tab !== 'tools'; $('#tabAdjust').hidden = b.dataset.tab !== 'adjust'; uiDirty = true; Snd.click();
+  $('#tabTools').hidden = shapeTab !== 'tools'; $('#tabAdjust').hidden = shapeTab !== 'adjust'; $('#tabTop').hidden = shapeTab !== 'top';
+  // トッピング：開いたらすぐまぶせるように、何も選んでいなければスプレーを選ぶ
+  if (shapeTab === 'top') { if (!topMode) setTop('spr'); $('#toolHint').textContent = 'わたあめをタップすると、そこにまぶせるよ。ドラッグで回して横や後ろにも。'; }
+  else setTool(tool);
+  uiDirty = true; Snd.click();
 }));
 
 /* =========================================================
@@ -3480,7 +3489,7 @@ function buildHero() {
   M.stickSpin = 0.5; M.emitScale = 0.2;
 }
 function goTitle(rebuild) {
-  cloud.position.y = 0; M.lift = 0; clearToppings(); topMode = null; phase = 'title'; showScreen('scr-title'); chal = null; strokeEnd();
+  cloud.position.y = 0; M.lift = 0; clearToppings(); setTop(null); phase = 'title'; showScreen('scr-title'); chal = null; strokeEnd();
   if (rebuild) buildHero();
   M.rpmT = 0.46; M.emitScale = 0.2; M.emitting = true; M.capture = true; M.stickSpin = 0.5; M.temp = Math.max(M.temp, 0.7);
   camFront(); CAM.zoomT = 1;
@@ -4027,10 +4036,10 @@ function updateToppings(dt) {
 $$('[data-top]').forEach(b => b.addEventListener('click', () => {
   Snd.init();
   if (b.dataset.top === 'all') { sprinkle('all', null); return; }
-  topMode = topMode === b.dataset.top ? null : b.dataset.top;
-  for (const x of $$('[data-top]')) x.setAttribute('aria-pressed', x.dataset.top === topMode);
-  if (topMode) toast('わたあめをタップしてまぶそう', 'ドラッグすると、これまでどおり回せます。');
+  setTop(topMode === b.dataset.top ? null : b.dataset.top);
 }));
+function setTop(t) { topMode = t; for (const x of $$('[data-top]')) x.setAttribute('aria-pressed', x.dataset.top === topMode); }
+$('#topClear').addEventListener('click', () => { clearToppings(); Snd.click(); });
 
 /* =========================================================
    カメラ・入力・オーバーレイ・メインループ
@@ -4127,7 +4136,7 @@ function ringPen(x, y) { // 画面の点 → 輪ができる高さの水平面�
 const ringDraw = () => phase === 'make' && M.wrap === 'ring';
 function camFront() { CAM.yawT = Math.round(CAM.yaw / (Math.PI * 2)) * Math.PI * 2; CAM.pitchT = 0; }
 let eatRot = false, tapStart = null;
-const rotateMode = () => (phase === 'shape' && tool === 'rotate') || (phase === 'eat' && eatRot);
+const rotateMode = () => (phase === 'shape' && (tool === 'rotate' || shapeTab === 'top')) || (phase === 'eat' && eatRot);
 let mid0x = 0, mid0y = 0, yaw0 = 0, pitch0 = 0;
 function orbitBy(dx, dy) { CAM.yawT -= dx * 0.009; CAM.pitchT = clamp(CAM.pitchT + dy * 0.006, -0.35, 1.0); }
 const ptrs = new Map(); let pinch0 = 0, zoom0 = 1, drag = null;
@@ -4166,7 +4175,7 @@ glCanvas.addEventListener('pointermove', e => {
   }
 });
 const ptrEnd = e => {
-  if (phase === 'result' && topMode && e.type === 'pointerup' && drag && tapStart && Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) < 10) { const w = screenToLocal(e.clientX, e.clientY); if (w) sprinkle(topMode, w); }
+  if (phase === 'shape' && shapeTab === 'top' && topMode && e.type === 'pointerup' && drag && tapStart && Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) < 10) { const w = screenToLocal(e.clientX, e.clientY); if (w) sprinkle(topMode, w); }
   ptrs.delete(e.pointerId); RPATH.pen = false; if (ptrs.size < 2) pinch0 = 0; if (!ptrs.size) { if (!B.auto) strokeEnd(); drag = null; } };
 glCanvas.addEventListener('pointerup', ptrEnd); glCanvas.addEventListener('pointercancel', ptrEnd);
 glCanvas.addEventListener('pointerleave', () => { hover.on = false; });
@@ -4319,10 +4328,15 @@ function detectFails(dt) {
 }
 
 /* ---- メインループ ---- */
-let last = performance.now(), acc = 0, time = 0;
+let last = performance.now(), acc = 0, time = 0, idleT = 0;
+for (const ev of ['pointerdown', 'keydown', 'wheel', 'resize', 'visibilitychange']) window.addEventListener(ev, () => { idleT = 0; }, { passive: true, capture: true });
 const lightW = new T3.Vector3(-0.45, 0.78, 0.55).normalize();
 function tick(now) {
   requestAnimationFrame(tick);
+  // 120Hzなどの画面でも描画は毎秒60回まで（見た目は同じで、発熱と電池の消耗をおさえる）
+  if (now - last < 10) return;
+  // タイトルでしばらく操作がなければ演出を一時停止（最後の画面はそのまま残る）。触れるとすぐ再開
+  if (phase === 'title') { idleT += (now - last) / 1000; if (idleT > 20) { last = now; return; } } else idleT = 0;
   let dt = (now - last) / 1000; last = now; if (!(dt > 0)) return; if (dt > 0.1) dt = 0.1;
   time += dt;
   // 端末が重いときは解像度を自動で下げ、余裕があれば上げる
